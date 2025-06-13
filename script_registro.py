@@ -14,6 +14,7 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 load_dotenv()
 
 
@@ -49,7 +50,7 @@ time.sleep(5)
 
 # %%
 login = 'usuário'
-senha = 'senha'
+senha = 'Senha'
 
  
 # Espera e preenche o campo de login
@@ -482,21 +483,50 @@ for linha, coluna in df_filtrado.iterrows():
     
     
     
-    # Bloco 15 – Clicar no botão "Registrar"
-    
-    # Aguarda o botão "Registrar" ficar clicável
+   
 
-    botao_registrar = WebDriverWait(driver, 20).until(
+    # --- Bloco 15 – Valida classe do input e clica em “Registrar” ----------------
 
-        EC.element_to_be_clickable((By.XPATH, '//*[@id="actionbar hide"]/div/div[2]/form/div/div[20]/sc-button/button'))
+    try:
+        # 1️⃣ Localiza o input de e-mail e obtém a classe
+        email_input = WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.XPATH, '//*[@formcontrolname="email"]'))
+        )
+        email_class = email_input.get_attribute("class")
 
-    )
-    
-    # Clica no botão
-    
-    botao_registrar.click()
-    
-    print("✅ Primeiro clique no botão 'Registrar' realizado com sucesso.")
+        # 2️⃣ Verifica se a classe indica que o campo é inválido
+        if "ng-invalid" in email_class:
+            # Clica no checkbox
+            checkbox = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable(
+                    (
+                        By.XPATH,
+                        '//*[@id="actionbar hide"]/div/div[2]/form/div/div[16]/sc-form-field/div/sc-checkbox/label/div',
+                    )
+                )
+            )
+            driver.execute_script("arguments[0].click();", checkbox)
+            print("☑️ Checkbox marcado (e-mail inválido).")
+        else:
+            print("📧 Campo de e-mail válido. Checkbox não necessário.")
+
+        # 3️⃣ Clica no botão “Registrar”
+        botao_registrar = WebDriverWait(driver, 20).until(
+            EC.element_to_be_clickable(
+                (
+                    By.XPATH,
+                    '//*[@id="actionbar hide"]/div/div[2]/form/div/div[20]/sc-button/button',
+                )
+            )
+        )
+        botao_registrar.click()
+        print("✅ Primeiro clique no botão 'Registrar' realizado com sucesso.")
+
+    except (TimeoutException, StaleElementReferenceException) as e:
+        print(f"⚠️ Erro ao tentar registrar chamado: {e}")
+
+
+
 
 
 
