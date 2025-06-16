@@ -2,6 +2,7 @@
 import pandas as pd
 import os
 import time
+from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -50,7 +51,7 @@ time.sleep(5)
 
 # %%
 login = 'usuário'
-senha = 'Senha'
+senha = 'senha'
 
  
 # Espera e preenche o campo de login
@@ -509,7 +510,7 @@ for linha, coluna in df_filtrado.iterrows():
             checkbox = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((
                     By.XPATH,
-                    "//label[contains(., 'Sem e-mail')]/div"
+                    "//*[@formcontrolname='customerWithoutEmail']//div[@class='ss-checkmark']"
                 ))
             )
             driver.execute_script("arguments[0].click();", checkbox)
@@ -532,20 +533,25 @@ for linha, coluna in df_filtrado.iterrows():
         raise
 
     # --- Bloco 16 – Confirmação no modal ------------------------------------------
-    try:
-        wait_button_enabled(XPATH_REGISTRAR_2)          # espera botão habilitar
-        botao_registrar2 = driver.find_element(By.XPATH, XPATH_REGISTRAR_2)
-        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", botao_registrar2)
-        esperando_elemento_spinner
-        botao_registrar2.click()
-        print("✅ Segundo clique no botão 'Registrar' (confirmação) realizado com sucesso.")
-
-    except TimeoutException as e:
-        print(f"⚠️ Erro ao tentar confirmar o registro: {e}")
-        raise
-
     
-    print("✅ Segundo clique no botão 'Registrar' (confirmação) realizado com sucesso.")
+    def esperar_overlay_sumir(timeout=20):
+        try:
+            WebDriverWait(driver, timeout).until_not(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.cdk-overlay-backdrop, ngx-spinner"))
+            )
+        except TimeoutException:
+            print("⚠️ Overlay ainda visível após o timeout.")
+    
+    try:
+        wait_button_enabled(XPATH_REGISTRAR_2)
+        botao_registrar2 = driver.find_element(By.XPATH, XPATH_REGISTRAR_2)
+        esperar_overlay_sumir()
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", botao_registrar2)
+        driver.execute_script("arguments[0].click();", botao_registrar2)
+        print("✅ Segundo clique no botão 'Registrar' (confirmação) realizado com sucesso.")
+    
+    except (TimeoutException, ElementClickInterceptedException) as e:
+        print(f"⚠️ Erro ao tentar confirmar o registro: {e}")
 
 
 
