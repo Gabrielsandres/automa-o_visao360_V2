@@ -291,7 +291,9 @@ for linha, coluna in df_filtrado.iterrows():
             # Bloco 6 – Selecionar o produto "Cobrança"
     
     # XPath do elemento que representa o card do produto "Cobrança"
-    xpath_cobranca = '//*[@id="products"]/div[10]/sc-card/div/div/div/div'
+    #xpath_cobranca = '//*[@id="products"]/div[10]/sc-card/div/div/div/div'
+    xpath_cobranca = '//*[@id="products"]/div[10]/sc-card/div/div'
+    
     
     # Aguarda o produto "Cobrança" ficar clicável
     produto_cobranca = WebDriverWait(driver, 10).until(
@@ -485,66 +487,63 @@ for linha, coluna in df_filtrado.iterrows():
     
    
 
-    # --- Bloco 15 – Valida classe do input e clica em “Registrar” ----------------
+    # --- Helpers -----------------------------------------------------------------
+    XPATH_REGISTRAR_1 = '//*[@id="actionbar hide"]/div/div[2]/form/div/div[20]/sc-button/button'
+    XPATH_REGISTRAR_2 = '//*[@id="modal"]/div/sc-modal-footer/div/div/div[2]/sc-button/button'
 
+    def wait_button_enabled(xpath, timeout=30):
+        """Espera o botão existir, estar visível e não ter atributo disabled."""
+        return WebDriverWait(driver, timeout).until(
+            lambda d: d.find_element(By.XPATH, xpath).is_enabled()
+                and d.find_element(By.XPATH, xpath).is_displayed()
+        )  # devolve True → o WebDriverWait retorna o botão
+    # -----------------------------------------------------------------------------
+
+    # --- Bloco 15 – Validação do e-mail + 1º clique --------------------------------
     try:
-        # 1️⃣ Localiza o input de e-mail e obtém a classe
         email_input = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.XPATH, '//*[@formcontrolname="email"]'))
+            EC.presence_of_element_located((By.XPATH, "//*[@formcontrolname='email']"))
         )
-        email_class = email_input.get_attribute("class")
 
-        # 2️⃣ Verifica se a classe indica que o campo é inválido
-        if "ng-invalid" in email_class:
-            # Clica no checkbox
+        if "ng-invalid" in email_input.get_attribute("class"):
             checkbox = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(
-                    (
-                        By.XPATH,
-                        '//*[@id="actionbar hide"]/div/div[2]/form/div/div[16]/sc-form-field/div/sc-checkbox/label/div',
-                    )
-                )
+                EC.element_to_be_clickable((
+                    By.XPATH,
+                    "//label[contains(., 'Sem e-mail')]/div"
+                ))
             )
             driver.execute_script("arguments[0].click();", checkbox)
             print("☑️ Checkbox marcado (e-mail inválido).")
         else:
             print("📧 Campo de e-mail válido. Checkbox não necessário.")
 
-        # 3️⃣ Clica no botão “Registrar”
-        botao_registrar = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable(
-                (
-                    By.XPATH,
-                    '//*[@id="actionbar hide"]/div/div[2]/form/div/div[20]/sc-button/button',
-                )
-            )
-        )
+        # espera o botão ficar habilitado
+        wait_button_enabled(XPATH_REGISTRAR_1)
+        botao_registrar = driver.find_element(By.XPATH, XPATH_REGISTRAR_1)
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", botao_registrar)
         botao_registrar.click()
         print("✅ Primeiro clique no botão 'Registrar' realizado com sucesso.")
 
-    except (TimeoutException, StaleElementReferenceException) as e:
-        print(f"⚠️ Erro ao tentar registrar chamado: {e}")
+    except TimeoutException as e:
+        print(f"⚠️ Erro ao tentar clicar no 1º Registrar: {e}")
+        # Debug extra: mostra controles ainda inválidos
+        for inv in driver.find_elements(By.CSS_SELECTOR, "input.ng-invalid, select.ng-invalid, textarea.ng-invalid"):
+            print("Campo ainda inválido:", inv.get_attribute("formcontrolname") or inv.get_attribute("id"))
+        raise
 
+    # --- Bloco 16 – Confirmação no modal ------------------------------------------
+    try:
+        wait_button_enabled(XPATH_REGISTRAR_2)          # espera botão habilitar
+        botao_registrar2 = driver.find_element(By.XPATH, XPATH_REGISTRAR_2)
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", botao_registrar2)
+        esperando_elemento_spinner
+        botao_registrar2.click()
+        print("✅ Segundo clique no botão 'Registrar' (confirmação) realizado com sucesso.")
 
+    except TimeoutException as e:
+        print(f"⚠️ Erro ao tentar confirmar o registro: {e}")
+        raise
 
-
-
-
-
-    # Bloco 16 – Clicar no segundo botão "Registrar" (confirmação do modal)
-    
-    # Aguarda o botão "Registrar" dentro do modal ficar clicável
-
-    botao_confirmar_registro = WebDriverWait(driver, 20).until(
-
-        EC.element_to_be_clickable((By.XPATH, '//*[@id="modal"]/div/sc-modal-footer/div/div/div[2]/sc-button/button'))
-
-    )
-    
-    # Clica no botão de confirmação
-    #000
-    
-    botao_confirmar_registro.click()
     
     print("✅ Segundo clique no botão 'Registrar' (confirmação) realizado com sucesso.")
 
@@ -583,8 +582,9 @@ for linha, coluna in df_filtrado.iterrows():
         )
         #000
         
-        btn_finalizar.click()
         esperando_elemento_spinner()
+        btn_finalizar.click()
+        
 
         print("✅ Botão 'Finalizar Atendimento' clicado com sucesso.")
 
