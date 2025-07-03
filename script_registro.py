@@ -36,15 +36,23 @@ client = gspread.authorize(creds)
 planilha = client.open("planilha_registro")
 aba = planilha.worksheet("Página1")
 
-# %%
-folderFile = os.path.join(os.getcwd(), 'planilha_registro.xlsx')
-
-# %%
-df = pd.read_excel(folderFile,dtype={'Documento do cooperado': str})
+# Carregar a planilha como DataFrame
+df = get_as_dataframe(aba, dtype={'Documento do cooperado': str})
+df = df.dropna(how="all")  # Remove linhas completamente vazias
 
 
-# %%
+# Filtrar os não registrados
 df_filtrado = df[df['Protocolo Visão'].isna()].copy()
+
+# %%
+#folderFile = os.path.join(os.getcwd(), 'planilha_registro.xlsx')
+
+# %%
+#df = pd.read_excel(folderFile,dtype={'Documento do cooperado': str})
+
+
+# %%
+#df_filtrado = df[df['Protocolo Visão'].isna()].copy()
 
 # %%
 df_filtrado.head()
@@ -66,8 +74,10 @@ driver.get(url)
 time.sleep(5)
 
 # %%
-login = 'usuário'
-senha = 'senha'
+login = os.getenv("LOGIN_VIS")
+senha = os.getenv("SENHA_VIS")
+credenciais_path = os.getenv("GOOGLE_CREDS_PATH", "credenciais.json")
+
 
  
 # Espera e preenche o campo de login
@@ -586,8 +596,12 @@ for linha, coluna in df_filtrado.iterrows():
     df.loc[linha, 'Protocolo Visão'] = numero_protocolo
     print(f"✅ Protocolo {numero_protocolo} colado na planilha com sucesso.")
     
-        # Salva de volta
-    df.to_excel(folderFile, index=False)
+    
+        # Atualiza o dado específico na aba online
+    linha_sheets = linha + 2  # +2 porque planilhas Google começam em 1 e a primeira linha é o cabeçalho
+    coluna_protocolo = df.columns.get_loc('Protocolo Visão') + 1  # posição da coluna no Google Sheets
+
+    aba.update_cell(linha_sheets, coluna_protocolo, numero_protocolo)
 
 
 
@@ -604,8 +618,9 @@ for linha, coluna in df_filtrado.iterrows():
         )
         #000
         
-        esperando_elemento_spinner()
         btn_finalizar.click()
+        esperando_elemento_spinner()
+        
         
 
         print("✅ Botão 'Finalizar Atendimento' clicado com sucesso.")
