@@ -2,6 +2,8 @@
 import pandas as pd
 import os
 import time
+import gspread
+
 from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
@@ -17,8 +19,22 @@ from dotenv import load_dotenv
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 load_dotenv()
+from gspread_dataframe import get_as_dataframe, set_with_dataframe
+from oauth2client.service_account import ServiceAccountCredentials
 
+# Caminho para o arquivo de credenciais
+credenciais_path = os.path.join(os.getcwd(), 'credenciais.json')
 
+# Escopo necessário para Sheets + Drive
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+# Autenticação com Google
+creds = ServiceAccountCredentials.from_json_keyfile_name(credenciais_path, scope)
+client = gspread.authorize(creds)
+
+# Abrir a planilha e a aba
+planilha = client.open("planilha_registro")
+aba = planilha.worksheet("Página1")
 
 # %%
 folderFile = os.path.join(os.getcwd(), 'planilha_registro.xlsx')
